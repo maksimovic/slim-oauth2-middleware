@@ -1,5 +1,5 @@
 {
-    "name": "chadicus/slim-oauth2-middleware",
+    "name": "maksimovic/slim-oauth2-middleware",
     "description": "OAuth2 middleware for use within a Slim Framework API",
     "keywords": ["slim", "oauth2", "middleware"],
     "authors": [
@@ -10,21 +10,33 @@
         }
     ],
     "license": "MIT",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "config" : {
         "sort-packages": true
     },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/maksimovic/psr-middleware.git"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/maksimovic/slim-oauth2-http.git"
+        }
+    ],
     "require": {
-        "php": "^5.6 || ^7.0 || ^8.0",
+        "php": "^8.1",
         "bshaffer/oauth2-server-php": "^1.9",
-        "chadicus/psr-middleware": "^1.1",
-        "chadicus/slim-oauth2-http": "^3.2",
         "container-interop/container-interop": "^1.1",
+        "maksimovic/psr-middleware": "dev-master as 1.1.1",
+        "maksimovic/slim-oauth2-http": "dev-master as 3.2.1",
         "psr/http-message": "^1.0"
     },
     "require-dev": {
-        "laminas/laminas-diactoros": "^1.8 || ^2.0",
+        "laminas/laminas-diactoros": "^2.0 || ^3.0",
         "php-di/php-di": "^5.4",
-        "phpunit/phpunit": "^5.7 || ^6.5 || ^9.6 || ^10.1",
+        "phpunit/phpunit": "^10.5",
         "squizlabs/php_codesniffer": "^3.7"
     },
     "autoload": {
@@ -37,7 +49,8 @@
         "chadicus/slim-oauth2-routes": "Offers standard OAuth2 routes for slim applications"
     },
     "scripts": {
-        "lint": "vendor/bin/phpcs",
-        "test": "vendor/bin/phpunit"
+        "test": "phpunit",
+        "test:coverage": "phpunit --coverage-text --coverage-html build/coverage --coverage-clover build/logs/clover.xml",
+        "cs-check": "phpcs"
     }
 }
