@@ -10,27 +10,15 @@
         }
     ],
     "license": "MIT",
-    "minimum-stability": "dev",
-    "prefer-stable": true,
     "config" : {
         "sort-packages": true
     },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/maksimovic/psr-middleware.git"
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/maksimovic/slim-oauth2-http.git"
-        }
-    ],
     "require": {
         "php": "^8.1",
         "bshaffer/oauth2-server-php": "^1.9",
         "container-interop/container-interop": "^1.1",
-        "maksimovic/psr-middleware": "dev-master as 1.1.1",
-        "maksimovic/slim-oauth2-http": "dev-master as 3.2.1",
+        "maksimovic/psr-middleware": "^2.0",
+        "maksimovic/slim-oauth2-http": "^4.0",
         "psr/http-message": "^1.0"
     },
     "require-dev": {
@@ -46,7 +34,7 @@
         "psr-4": {"ChadicusTest\\Slim\\OAuth2\\Middleware\\" : "tests"}
     },
     "suggest": {
-        "chadicus/slim-oauth2-routes": "Offers standard OAuth2 routes for slim applications"
+        "maksimovic/slim-oauth2-routes": "Offers standard OAuth2 routes for slim applications"
     },
     "scripts": {
         "test": "phpunit",
