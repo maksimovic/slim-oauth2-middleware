@@ -19,4 +19,5 @@ jobs:
           php-version: ${{ matrix.php }}
           coverage: xdebug
       - run: composer install --prefer-dist --no-progress
+      - run: composer cs-check
       - run: composer test
