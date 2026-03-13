@@ -8,27 +8,22 @@ use Laminas\Diactoros\Response;
 use Laminas\Diactoros\ServerRequest;
 use OAuth2;
 use OAuth2\Storage;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
 
 /**
  * Unit tests for the \Chadicus\Slim\OAuth2\Middleware\Authorization class.
- *
- * @coversDefaultClass \Chadicus\Slim\OAuth2\Middleware\Authorization
- * @covers ::<private>
- * @covers ::__construct
  */
+#[CoversClass(Authorization::class)]
 final class AuthorizationTest extends TestCase
 {
     /**
      * Verify basic behavior of __invoke()
-     *
-     * @test
-     * @covers ::__invoke
-     *
-     * @return void
      */
-    public function invoke()
+    #[Test]
+    public function invoke(): void
     {
         $storage = new Storage\Memory(
             [
@@ -68,9 +63,8 @@ final class AuthorizationTest extends TestCase
             'expires' => 99999999900,
             'scope' => null,
         ];
-        $test = $this;
-        $next = function ($request, $response) use ($expectedToken, $test) {
-            $test->assertSame($expectedToken, $request->getAttribute(Authorization::TOKEN_ATTRIBUTE_KEY));
+        $next = function ($request, $response) use ($expectedToken) {
+            $this->assertSame($expectedToken, $request->getAttribute(Authorization::TOKEN_ATTRIBUTE_KEY));
             return $response;
         };
 
@@ -81,13 +75,9 @@ final class AuthorizationTest extends TestCase
 
     /**
      * Verify behavior of __invoke() with expired access token.
-     *
-     * @test
-     * @covers ::__invoke
-     *
-     * @return void
      */
-    public function invokeExpiredToken()
+    #[Test]
+    public function invokeExpiredToken(): void
     {
         $storage = new Storage\Memory(
             [
@@ -116,7 +106,7 @@ final class AuthorizationTest extends TestCase
         $headers = ['Authorization' => ['Bearer atokenvalue']];
         $request = new ServerRequest([], [], $uri, 'PATCH', 'php://input', $headers);
 
-        $middleware = new Authorization($server, new ArrayObject);
+        $middleware = new Authorization($server, new ArrayObject());
 
         $next = function () {
             throw new \Exception('This will not get executed');
@@ -133,14 +123,9 @@ final class AuthorizationTest extends TestCase
 
     /**
      * Verify basic behaviour of withRequiredScope().
-     *
-     * @test
-     * @covers ::__invoke
-     * @covers ::withRequiredScope
-     *
-     * @return void
      */
-    public function withRequiredScope()
+    #[Test]
+    public function withRequiredScope(): void
     {
         $storage = new Storage\Memory(
             [
@@ -180,9 +165,8 @@ final class AuthorizationTest extends TestCase
             'expires' => 99999999900,
             'scope' => 'allowFoo anotherScope',
         ];
-        $test = $this;
-        $next = function ($request, $response) use ($expectedToken, $test) {
-            $test->assertSame($expectedToken, $request->getAttribute(Authorization::TOKEN_ATTRIBUTE_KEY));
+        $next = function ($request, $response) use ($expectedToken) {
+            $this->assertSame($expectedToken, $request->getAttribute(Authorization::TOKEN_ATTRIBUTE_KEY));
             return $response;
         };
 
@@ -194,14 +178,9 @@ final class AuthorizationTest extends TestCase
 
     /**
      * Verify behaviour of withRequiredScope() with insufficient scope.
-     *
-     * @test
-     * @covers ::__invoke
-     * @covers ::withRequiredScope
-     *
-     * @return void
      */
-    public function withRequiredScopeInsufficientScope()
+    #[Test]
+    public function withRequiredScopeInsufficientScope(): void
     {
         $storage = new Storage\Memory(
             [
@@ -248,13 +227,9 @@ final class AuthorizationTest extends TestCase
 
     /**
      * Verify behavior of __invoke() without access token.
-     *
-     * @test
-     * @covers ::__invoke
-     *
-     * @return void
      */
-    public function invokeNoTokenProvided()
+    #[Test]
+    public function invokeNoTokenProvided(): void
     {
         $storage = new Storage\Memory([]);
 
@@ -282,14 +257,10 @@ final class AuthorizationTest extends TestCase
     }
 
     /**
-     * Verify __invoke() with scopes using OR logic
-     *
-     * @test
-     * @covers ::__invoke
-     *
-     * @return void
+     * Verify __invoke() with scopes using OR logic.
      */
-    public function invokeWithEitherScope()
+    #[Test]
+    public function invokeWithEitherScope(): void
     {
         $storage = new Storage\Memory(
             [
@@ -329,9 +300,8 @@ final class AuthorizationTest extends TestCase
             'expires' => 99999999900,
             'scope' => 'basicUser withPermission anExtraScope',
         ];
-        $test = $this;
-        $next = function ($request, $response) use ($expectedToken, $test) {
-            $test->assertSame($expectedToken, $request->getAttribute(Authorization::TOKEN_ATTRIBUTE_KEY));
+        $next = function ($request, $response) use ($expectedToken) {
+            $this->assertSame($expectedToken, $request->getAttribute(Authorization::TOKEN_ATTRIBUTE_KEY));
             return $response;
         };
 
@@ -341,14 +311,10 @@ final class AuthorizationTest extends TestCase
     }
 
     /**
-     * Verify behavior of the middleware with empty scope
-     *
-     * @test
-     * @covers ::__invoke
-     *
-     * @return void
+     * Verify behavior of the middleware with empty scope.
      */
-    public function invokeWithEmptyScope()
+    #[Test]
+    public function invokeWithEmptyScope(): void
     {
         $storage = new Storage\Memory(
             [
@@ -388,9 +354,8 @@ final class AuthorizationTest extends TestCase
             'expires' => 99999999900,
             'scope' => null,
         ];
-        $test = $this;
-        $next = function ($request, $response) use ($expectedToken, $test) {
-            $test->assertSame($expectedToken, $request->getAttribute(Authorization::TOKEN_ATTRIBUTE_KEY));
+        $next = function ($request, $response) use ($expectedToken) {
+            $this->assertSame($expectedToken, $request->getAttribute(Authorization::TOKEN_ATTRIBUTE_KEY));
             return $response;
         };
 
@@ -401,13 +366,9 @@ final class AuthorizationTest extends TestCase
 
     /**
      * Verify Content-Type header is added to response.
-     *
-     * @test
-     * @covers ::__invoke
-     *
-     * @return void
      */
-    public function invokeAddsContentType()
+    #[Test]
+    public function invokeAddsContentType(): void
     {
         $storage = new Storage\Memory([]);
 
@@ -436,18 +397,14 @@ final class AuthorizationTest extends TestCase
 
     /**
      * Verify Content-Type header remains unchanged if OAuth2 response contains the header.
-     *
-     * @test
-     * @covers ::__invoke
-     *
-     * @return void
      */
-    public function invokeRetainsContentType()
+    #[Test]
+    public function invokeRetainsContentType(): void
     {
-        $oauth2ServerMock = $this->getMockBuilder('\\OAuth2\\Server')->disableOriginalConstructor()->getMock();
-        //always return false on verify
+        $oauth2ServerMock = $this->getMockBuilder(OAuth2\Server::class)
+            ->disableOriginalConstructor()
+            ->getMock();
         $oauth2ServerMock->method('verifyResourceRequest')->willReturn(false);
-        //return a valid response with Content-Type
         $oauth2ServerMock->method('getResponse')->willReturn(
             new OAuth2\Response([], 400, ['Content-Type' => 'text/html'])
         );
@@ -462,47 +419,39 @@ final class AuthorizationTest extends TestCase
     }
 
     /**
-     * Ensure $container must be an instance of ArrayAccess or ContainerInterface.
-     *
-     * @test
-     * @covers ::__construct
-     *
-     * @return void
+     * Ensure $container must be an instance of ArrayAccess or have a set() method.
      */
-    public function constructWithInvalidContainer()
+    #[Test]
+    public function constructWithInvalidContainer(): void
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage("\$container does not implement ArrayAccess or contain a 'set' method");
-        $oauth2ServerMock = $this->getMockBuilder(OAuth2\Server::class)->disableOriginalConstructor()->getMock();
+        $oauth2ServerMock = $this->getMockBuilder(OAuth2\Server::class)
+            ->disableOriginalConstructor()
+            ->getMock();
         new Authorization($oauth2ServerMock, new \StdClass());
     }
 
     /**
-     * Verify middleware cannot be constructed with a pure PSR-11 container.
-     *
-     * @test
-     * @covers ::__construct
-     *
-     * @return void
+     * Verify middleware cannot be constructed with a pure PSR-11 container (no set method).
      */
-    public function constructWithPSR11Container()
+    #[Test]
+    public function constructWithPSR11Container(): void
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage("\$container does not implement ArrayAccess or contain a 'set' method");
         $container = $this->getMockBuilder(ContainerInterface::class)->getMock();
-        $oauth2ServerMock = $this->getMockBuilder(OAuth2\Server::class)->disableOriginalConstructor()->getMock();
+        $oauth2ServerMock = $this->getMockBuilder(OAuth2\Server::class)
+            ->disableOriginalConstructor()
+            ->getMock();
         new Authorization($oauth2ServerMock, $container);
     }
 
     /**
-     * Verify middleware can use interop container.
-     *
-     * @test
-     * @covers ::__invoke
-     *
-     * @return void
+     * Verify middleware can use interop container with set() method.
      */
-    public function invokeWithInteropContainer()
+    #[Test]
+    public function invokeWithInteropContainer(): void
     {
         $storage = new Storage\Memory(
             [
@@ -542,14 +491,39 @@ final class AuthorizationTest extends TestCase
             'expires' => 99999999900,
             'scope' => null,
         ];
-        $test = $this;
-        $next = function ($request, $response) use ($expectedToken, $test) {
-            $test->assertSame($expectedToken, $request->getAttribute(Authorization::TOKEN_ATTRIBUTE_KEY));
+        $next = function ($request, $response) use ($expectedToken) {
+            $this->assertSame($expectedToken, $request->getAttribute(Authorization::TOKEN_ATTRIBUTE_KEY));
             return $response;
         };
 
         $middleware($request, new Response(), $next);
 
         $this->assertSame($expectedToken, $container->get('token'));
+    }
+
+    /**
+     * Verify withRequiredScope returns a new instance (clone) with different scopes.
+     */
+    #[Test]
+    public function withRequiredScopeReturnsClone(): void
+    {
+        $oauth2ServerMock = $this->getMockBuilder(OAuth2\Server::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+
+        $middleware = new Authorization($oauth2ServerMock, new ArrayObject());
+        $scoped = $middleware->withRequiredScope(['someScope']);
+
+        $this->assertInstanceOf(Authorization::class, $scoped);
+        $this->assertNotSame($middleware, $scoped);
+    }
+
+    /**
+     * Verify TOKEN_ATTRIBUTE_KEY constant value.
+     */
+    #[Test]
+    public function tokenAttributeKeyConstant(): void
+    {
+        $this->assertSame('oauth2-token', Authorization::TOKEN_ATTRIBUTE_KEY);
     }
 }

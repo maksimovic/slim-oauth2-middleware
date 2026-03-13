@@ -1,49 +1,22 @@
 # Chadicus\Slim\OAuth2\Middleware
 
-[![Latest Stable Version](https://poser.pugx.org/chadicus/slim-oauth2-middleware/v/stable)](https://packagist.org/packages/chadicus/slim-oauth2-middleware)
-[![Latest Unstable Version](https://poser.pugx.org/chadicus/slim-oauth2-middleware/v/unstable)](https://packagist.org/packages/chadicus/slim-oauth2-middleware)
-[![License](https://poser.pugx.org/chadicus/slim-oauth2-middleware/license)](https://packagist.org/packages/chadicus/slim-oauth2-middleware)
+> **Fork Notice:** This is a maintained fork of the abandoned [`chadicus/slim-oauth2-middleware`](https://github.com/chadicus/slim-oauth2-middleware) package. Updated for PHP 8.1+.
 
-[![Total Downloads](https://poser.pugx.org/chadicus/slim-oauth2-middleware/downloads)](https://packagist.org/packages/chadicus/slim-oauth2-middleware)
-[![Daily Downloads](https://poser.pugx.org/chadicus/slim-oauth2-middleware/d/daily)](https://packagist.org/packages/chadicus/slim-oauth2-middleware)
-[![Monthly Downloads](https://poser.pugx.org/chadicus/slim-oauth2-middleware/d/monthly)](https://packagist.org/packages/chadicus/slim-oauth2-middleware)
+[![License](https://poser.pugx.org/maksimovic/slim-oauth2-middleware/license)](https://packagist.org/packages/maksimovic/slim-oauth2-middleware)
 
-[![Documentation](https://img.shields.io/badge/reference-phpdoc-blue.svg?style=flat)](http://pholiophp.org/chadicus/slim-oauth2-middleware)
-
-Middleware for using [OAuth2 Server](http://bshaffer.github.io/oauth2-server-php-docs/) within a [Slim 3 Framework](http://www.slimframework.com/) API
+Middleware for using [OAuth2 Server](http://bshaffer.github.io/oauth2-server-php-docs/) within a [Slim Framework](http://www.slimframework.com/) API.
 
 ## Requirements
 
-Chadicus\Slim\OAuth2\Middleware requires PHP 5.6 (or later).
+PHP 8.1 or later.
 
-## Composer
-To add the library as a local, per-project dependency use [Composer](http://getcomposer.org)! Simply add a dependency on
-`chadicus/slim-oauth2-middleware` to your project's `composer.json` file such as:
+## Installation
 
 ```sh
-composer require chadicus/slim-oauth2-middleware
+composer require maksimovic/slim-oauth2-middleware
 ```
 
-## Contact
-Developers may be contacted at:
-
- * [Pull Requests](https://github.com/chadicus/slim-oauth2-middleware/pulls)
- * [Issues](https://github.com/chadicus/slim-oauth2-middleware/issues)
-
-## Project Build
-With a checkout of the code get [Composer](http://getcomposer.org) in your PATH and run:
-
-```sh
-composer install
-./vendor/bin/phpunit
-./vendor/bin/phpcs
-```
-## Community
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/slim-oauth2/Lobby#)
- 
 ## Example Usage
-
-Simple example for using the authorization middleware.
 
 ```php
 use Chadicus\Slim\OAuth2\Middleware;
@@ -52,7 +25,7 @@ use OAuth2\Storage;
 use OAuth2\GrantType;
 use Slim;
 
-//set up storage for oauth2 server
+// Set up storage for OAuth2 server
 $storage = new Storage\Memory(
     [
         'client_credentials' => [
@@ -66,49 +39,50 @@ $storage = new Storage\Memory(
                 'client_secret' => 'p4ssw0rd',
                 'scope' => 'basicUser canViewFoos',
             ],
-            'bar-client' => [
-                'client_id' => 'foo-client',
-                'client_secret' => '!password1',
-                'scope' => 'basicUser',
-            ],
         ],
     ]
 );
 
-// create the oauth2 server
+// Create the OAuth2 server
 $server = new OAuth2\Server(
     $storage,
-    [
-        'access_lifetime' => 3600,
-    ],
-    [
-        new GrantType\ClientCredentials($storage),
-    ]
+    ['access_lifetime' => 3600],
+    [new GrantType\ClientCredentials($storage)]
 );
 
-//create the basic app
+// Create the Slim app
 $app = new Slim\App();
 
-// create the authorization middlware
+// Create the authorization middleware
 $authMiddleware = new Middleware\Authorization($server, $app->getContainer());
 
-//Assumes token endpoints available for creating access tokens
-
+// No scope required
 $app->get('foos', function ($request, $response, $args) {
-    //return all foos, no scope required
+    // return all foos
 })->add($authMiddleware);
 
-$getRouteCallback = function ($request, $response, $id) {
-    //return details for a foo, requires superUser scope OR basicUser with canViewFoos scope
-};
+// Requires superUser scope OR (basicUser AND canViewFoos)
+$app->get('foos/id', function ($request, $response, $id) {
+    // return foo details
+})->add($authMiddleware->withRequiredScope(['superUser', ['basicUser', 'canViewFoos']]));
 
-$app->get('foos/id', $getRouteCallback)->add($authMiddleware->withRequiredScope(['superUser', ['basicUser', 'canViewFoos']]));
-
-$postRouteCallback = function ($request, $response, $args) {
-    //Create a new foo, requires superUser scope
-};
-
-$app->post('foos', $postRouteCallback)->add($authMiddleware->withRequiredScope(['superUser']));
+// Requires superUser scope
+$app->post('foos', function ($request, $response, $args) {
+    // create a new foo
+})->add($authMiddleware->withRequiredScope(['superUser']));
 
 $app->run();
 ```
+
+## Development
+
+```sh
+composer install
+composer test
+composer test:coverage
+composer cs-check
+```
+
+## License
+
+MIT
