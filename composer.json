@@ -10,6 +10,9 @@
         }
     ],
     "license": "MIT",
+    "replace": {
+        "chadicus/slim-oauth2-middleware": "self.version"
+    },
     "config" : {
         "sort-packages": true
     },
