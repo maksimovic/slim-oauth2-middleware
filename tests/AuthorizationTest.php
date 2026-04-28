@@ -12,6 +12,9 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
 /**
  * Unit tests for the \Chadicus\Slim\OAuth2\Middleware\Authorization class.
@@ -20,10 +23,41 @@ use Psr\Container\ContainerInterface;
 final class AuthorizationTest extends TestCase
 {
     /**
-     * Verify basic behavior of __invoke()
+     * Build a RequestHandlerInterface that captures the request it received and returns the given response.
+     */
+    private function capturingHandler(?ResponseInterface $response = null): RequestHandlerInterface
+    {
+        return new class ($response ?? new Response()) implements RequestHandlerInterface {
+            public ?ServerRequestInterface $captured = null;
+            public function __construct(private ResponseInterface $response)
+            {
+            }
+            public function handle(ServerRequestInterface $request): ResponseInterface
+            {
+                $this->captured = $request;
+                return $this->response;
+            }
+        };
+    }
+
+    /**
+     * Build a RequestHandlerInterface that throws if invoked.
+     */
+    private function neverCalledHandler(): RequestHandlerInterface
+    {
+        return new class implements RequestHandlerInterface {
+            public function handle(ServerRequestInterface $request): ResponseInterface
+            {
+                throw new \Exception('This will not get executed');
+            }
+        };
+    }
+
+    /**
+     * Verify basic behavior of process() with a valid token.
      */
     #[Test]
-    public function invoke(): void
+    public function process(): void
     {
         $storage = new Storage\Memory(
             [
@@ -63,21 +97,19 @@ final class AuthorizationTest extends TestCase
             'expires' => 99999999900,
             'scope' => null,
         ];
-        $next = function ($request, $response) use ($expectedToken) {
-            $this->assertSame($expectedToken, $request->getAttribute(Authorization::TOKEN_ATTRIBUTE_KEY));
-            return $response;
-        };
 
-        $middleware($request, new Response(), $next);
+        $handler = $this->capturingHandler();
+        $middleware->process($request, $handler);
 
+        $this->assertSame($expectedToken, $handler->captured->getAttribute(Authorization::TOKEN_ATTRIBUTE_KEY));
         $this->assertSame($expectedToken, $container['token']);
     }
 
     /**
-     * Verify behavior of __invoke() with expired access token.
+     * Verify behavior of process() with expired access token.
      */
     #[Test]
-    public function invokeExpiredToken(): void
+    public function processExpiredToken(): void
     {
         $storage = new Storage\Memory(
             [
@@ -108,11 +140,7 @@ final class AuthorizationTest extends TestCase
 
         $middleware = new Authorization($server, new ArrayObject());
 
-        $next = function () {
-            throw new \Exception('This will not get executed');
-        };
-
-        $response = $middleware($request, new Response(), $next);
+        $response = $middleware->process($request, $this->neverCalledHandler());
 
         $this->assertSame(401, $response->getStatusCode());
         $this->assertSame(
@@ -165,14 +193,12 @@ final class AuthorizationTest extends TestCase
             'expires' => 99999999900,
             'scope' => 'allowFoo anotherScope',
         ];
-        $next = function ($request, $response) use ($expectedToken) {
-            $this->assertSame($expectedToken, $request->getAttribute(Authorization::TOKEN_ATTRIBUTE_KEY));
-            return $response;
-        };
 
-        $response = $middleware->withRequiredScope(['allowFoo'])->__invoke($request, new Response(), $next);
+        $handler = $this->capturingHandler();
+        $response = $middleware->withRequiredScope(['allowFoo'])->process($request, $handler);
 
         $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame($expectedToken, $handler->captured->getAttribute(Authorization::TOKEN_ATTRIBUTE_KEY));
         $this->assertSame($expectedToken, $container['token']);
     }
 
@@ -211,11 +237,7 @@ final class AuthorizationTest extends TestCase
 
         $middleware = new Authorization($server, new ArrayObject(), ['allowFoo']);
 
-        $next = function ($request, $response) {
-            throw new \Exception('This will not get executed');
-        };
-
-        $response = $middleware($request, new Response(), $next);
+        $response = $middleware->process($request, $this->neverCalledHandler());
 
         $this->assertSame(403, $response->getStatusCode());
         $this->assertSame(
@@ -226,10 +248,10 @@ final class AuthorizationTest extends TestCase
     }
 
     /**
-     * Verify behavior of __invoke() without access token.
+     * Verify behavior of process() without access token.
      */
     #[Test]
-    public function invokeNoTokenProvided(): void
+    public function processNoTokenProvided(): void
     {
         $storage = new Storage\Memory([]);
 
@@ -247,20 +269,16 @@ final class AuthorizationTest extends TestCase
 
         $middleware = new Authorization($server, new ArrayObject());
 
-        $next = function ($request, $response) {
-            throw new \Exception('This will not get executed');
-        };
-
-        $response = $middleware($request, new Response(), $next);
+        $response = $middleware->process($request, $this->neverCalledHandler());
 
         $this->assertSame(401, $response->getStatusCode());
     }
 
     /**
-     * Verify __invoke() with scopes using OR logic.
+     * Verify process() with scopes using OR logic.
      */
     #[Test]
-    public function invokeWithEitherScope(): void
+    public function processWithEitherScope(): void
     {
         $storage = new Storage\Memory(
             [
@@ -300,13 +318,12 @@ final class AuthorizationTest extends TestCase
             'expires' => 99999999900,
             'scope' => 'basicUser withPermission anExtraScope',
         ];
-        $next = function ($request, $response) use ($expectedToken) {
-            $this->assertSame($expectedToken, $request->getAttribute(Authorization::TOKEN_ATTRIBUTE_KEY));
-            return $response;
-        };
 
-        $response = $middleware($request, new Response(), $next);
+        $handler = $this->capturingHandler();
+        $response = $middleware->process($request, $handler);
+
         $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame($expectedToken, $handler->captured->getAttribute(Authorization::TOKEN_ATTRIBUTE_KEY));
         $this->assertSame($expectedToken, $container['token']);
     }
 
@@ -314,7 +331,7 @@ final class AuthorizationTest extends TestCase
      * Verify behavior of the middleware with empty scope.
      */
     #[Test]
-    public function invokeWithEmptyScope(): void
+    public function processWithEmptyScope(): void
     {
         $storage = new Storage\Memory(
             [
@@ -354,21 +371,19 @@ final class AuthorizationTest extends TestCase
             'expires' => 99999999900,
             'scope' => null,
         ];
-        $next = function ($request, $response) use ($expectedToken) {
-            $this->assertSame($expectedToken, $request->getAttribute(Authorization::TOKEN_ATTRIBUTE_KEY));
-            return $response;
-        };
 
-        $middleware($request, new Response(), $next);
+        $handler = $this->capturingHandler();
+        $middleware->process($request, $handler);
 
+        $this->assertSame($expectedToken, $handler->captured->getAttribute(Authorization::TOKEN_ATTRIBUTE_KEY));
         $this->assertSame($expectedToken, $container['token']);
     }
 
     /**
-     * Verify Content-Type header is added to response.
+     * Verify Content-Type header is added to response when oauth2 server response has none.
      */
     #[Test]
-    public function invokeAddsContentType(): void
+    public function processAddsContentType(): void
     {
         $storage = new Storage\Memory([]);
 
@@ -386,11 +401,7 @@ final class AuthorizationTest extends TestCase
 
         $middleware = new Authorization($server, new ArrayObject());
 
-        $next = function ($request, $response) {
-            throw new \Exception('This will not get executed');
-        };
-
-        $response = $middleware($request, new Response(), $next);
+        $response = $middleware->process($request, $this->neverCalledHandler());
 
         $this->assertSame('application/json', $response->getHeaderLine('Content-Type'));
     }
@@ -399,7 +410,7 @@ final class AuthorizationTest extends TestCase
      * Verify Content-Type header remains unchanged if OAuth2 response contains the header.
      */
     #[Test]
-    public function invokeRetainsContentType(): void
+    public function processRetainsContentType(): void
     {
         $oauth2ServerMock = $this->getMockBuilder(OAuth2\Server::class)
             ->disableOriginalConstructor()
@@ -410,11 +421,9 @@ final class AuthorizationTest extends TestCase
         );
 
         $middleware = new Authorization($oauth2ServerMock, new ArrayObject());
-        $next = function ($request, $response) {
-            throw new \Exception('This will not get executed');
-        };
 
-        $response = $middleware(new ServerRequest(), new Response(), $next);
+        $response = $middleware->process(new ServerRequest(), $this->neverCalledHandler());
+
         $this->assertSame('text/html', $response->getHeaderLine('Content-Type'));
     }
 
@@ -448,10 +457,10 @@ final class AuthorizationTest extends TestCase
     }
 
     /**
-     * Verify middleware can use interop container with set() method.
+     * Verify middleware can use a PHP-DI container (has a set() method).
      */
     #[Test]
-    public function invokeWithInteropContainer(): void
+    public function processWithPhpDiContainer(): void
     {
         $storage = new Storage\Memory(
             [
@@ -491,13 +500,11 @@ final class AuthorizationTest extends TestCase
             'expires' => 99999999900,
             'scope' => null,
         ];
-        $next = function ($request, $response) use ($expectedToken) {
-            $this->assertSame($expectedToken, $request->getAttribute(Authorization::TOKEN_ATTRIBUTE_KEY));
-            return $response;
-        };
 
-        $middleware($request, new Response(), $next);
+        $handler = $this->capturingHandler();
+        $middleware->process($request, $handler);
 
+        $this->assertSame($expectedToken, $handler->captured->getAttribute(Authorization::TOKEN_ATTRIBUTE_KEY));
         $this->assertSame($expectedToken, $container->get('token'));
     }
 
