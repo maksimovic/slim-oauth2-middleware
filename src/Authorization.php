@@ -4,13 +4,14 @@ namespace Chadicus\Slim\OAuth2\Middleware;
 use ArrayAccess;
 use Chadicus\Slim\OAuth2\Http\RequestBridge;
 use Chadicus\Slim\OAuth2\Http\ResponseBridge;
-use Chadicus\Psr\Middleware\MiddlewareInterface;
-use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\ResponseInterface;
 use OAuth2;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
 /**
- * Slim Middleware to handle OAuth2 Authorization.
+ * PSR-15 middleware to handle OAuth2 authorization.
  */
 class Authorization implements MiddlewareInterface
 {
@@ -41,7 +42,7 @@ class Authorization implements MiddlewareInterface
     private $container;
 
     /**
-     * Create a new instance of the Authroization middleware.
+     * Create a new instance of the Authorization middleware.
      *
      * @param OAuth2\Server $server    The configured OAuth2 server.
      * @param mixed         $container A container object in which to store the token from the request.
@@ -52,7 +53,7 @@ class Authorization implements MiddlewareInterface
      *                                 will be verified if the request token has 'superUser' scope
      *                                 OR 'basicUser' and 'aPermission' as its scope.
      *
-     * @throws \InvalidArgumentException Thrown if $container is not an instance of ArrayAccess or ContainerInterface.
+     * @throws \InvalidArgumentException Thrown if $container is not an instance of ArrayAccess or has no set() method.
      */
     public function __construct(OAuth2\Server $server, $container, array $scopes = [])
     {
@@ -61,23 +62,14 @@ class Authorization implements MiddlewareInterface
         $this->scopes = $this->formatScopes($scopes);
     }
 
-    /**
-     * Execute this middleware.
-     *
-     * @param  ServerRequestInterface $request  The PSR7 request.
-     * @param  ResponseInterface      $response The PSR7 response.
-     * @param  callable               $next     The Next middleware.
-     *
-     * @return ResponseInterface
-     */
-    public function __invoke(ServerRequestInterface $request, ResponseInterface $response, callable $next)
+    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $oauth2Request = RequestBridge::toOAuth2($request);
         foreach ($this->scopes as $scope) {
             if ($this->server->verifyResourceRequest($oauth2Request, null, $scope)) {
                 $token = $this->server->getResourceController()->getToken();
                 $this->setToken($token);
-                return $next($request->withAttribute(self::TOKEN_ATTRIBUTE_KEY, $token), $response);
+                return $handler->handle($request->withAttribute(self::TOKEN_ATTRIBUTE_KEY, $token));
             }
         }
 
@@ -108,9 +100,9 @@ class Authorization implements MiddlewareInterface
     }
 
     /**
-     * Returns a callable function to be used as a authorization middleware with a specified scope.
+     * Returns a clone of this middleware with the given required scopes.
      *
-     * @param array $scopes Scopes require for authorization.
+     * @param array $scopes Scopes required for authorization.
      *
      * @return Authorization
      */

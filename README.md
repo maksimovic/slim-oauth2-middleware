@@ -1,10 +1,10 @@
 # Chadicus\Slim\OAuth2\Middleware
 
-> **Fork Notice:** This is a maintained fork of the abandoned [`chadicus/slim-oauth2-middleware`](https://github.com/chadicus/slim-oauth2-middleware) package. Updated for PHP 8.1+.
+> **Fork Notice:** This is a maintained fork of the abandoned [`chadicus/slim-oauth2-middleware`](https://github.com/chadicus/slim-oauth2-middleware) package. Updated for PHP 8.1+ and PSR-15.
 
 [![License](https://poser.pugx.org/maksimovic/slim-oauth2-middleware/license)](https://packagist.org/packages/maksimovic/slim-oauth2-middleware)
 
-Middleware for using [OAuth2 Server](http://bshaffer.github.io/oauth2-server-php-docs/) within a [Slim Framework](http://www.slimframework.com/) API.
+PSR-15 middleware for using [OAuth2 Server](http://bshaffer.github.io/oauth2-server-php-docs/) within any PSR-15 compatible framework, including [Slim 4](http://www.slimframework.com/).
 
 ## Requirements
 
@@ -16,63 +16,34 @@ PHP 8.1 or later.
 composer require maksimovic/slim-oauth2-middleware
 ```
 
-## Example Usage
+## Example usage
 
 ```php
-use Chadicus\Slim\OAuth2\Middleware;
+use Chadicus\Slim\OAuth2\Middleware\Authorization;
 use OAuth2;
 use OAuth2\Storage;
 use OAuth2\GrantType;
-use Slim;
 
-// Set up storage for OAuth2 server
-$storage = new Storage\Memory(
-    [
-        'client_credentials' => [
-            'administrator' => [
-                'client_id' => 'administrator',
-                'client_secret' => 'password',
-                'scope' => 'superUser',
-            ],
-            'foo-client' => [
-                'client_id' => 'foo-client',
-                'client_secret' => 'p4ssw0rd',
-                'scope' => 'basicUser canViewFoos',
-            ],
-        ],
-    ]
-);
+$storage = new Storage\Memory([
+    'client_credentials' => [
+        'administrator' => ['client_id' => 'administrator', 'client_secret' => 'password', 'scope' => 'superUser'],
+    ],
+]);
 
-// Create the OAuth2 server
 $server = new OAuth2\Server(
     $storage,
     ['access_lifetime' => 3600],
     [new GrantType\ClientCredentials($storage)]
 );
 
-// Create the Slim app
-$app = new Slim\App();
+$auth = new Authorization($server, $container);
 
-// Create the authorization middleware
-$authMiddleware = new Middleware\Authorization($server, $app->getContainer());
-
-// No scope required
-$app->get('foos', function ($request, $response, $args) {
-    // return all foos
-})->add($authMiddleware);
-
-// Requires superUser scope OR (basicUser AND canViewFoos)
-$app->get('foos/id', function ($request, $response, $id) {
-    // return foo details
-})->add($authMiddleware->withRequiredScope(['superUser', ['basicUser', 'canViewFoos']]));
-
-// Requires superUser scope
-$app->post('foos', function ($request, $response, $args) {
-    // create a new foo
-})->add($authMiddleware->withRequiredScope(['superUser']));
-
-$app->run();
+// Slim 4
+$app->get('/foos', $handler)->add($auth);
+$app->post('/foos', $handler)->add($auth->withRequiredScope(['superUser']));
 ```
+
+`$container` must be either an `ArrayAccess` or expose a `set($key, $value)` method (e.g. PHP-DI). The decoded access token is stored under the `'token'` key on success and added to the request as the `oauth2-token` attribute.
 
 ## Development
 
